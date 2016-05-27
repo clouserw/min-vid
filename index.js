@@ -4,6 +4,7 @@
  * http://mozilla.org/MPL/2.0/.
  */
 
+const getVideoId = require('get-video-id');
 const qs = require('sdk/querystring');
 var panel = require("sdk/panel").Panel({
   contentURL: "./default.html",
@@ -18,13 +19,14 @@ var panel = require("sdk/panel").Panel({
 
 var { getActiveView } = require("sdk/view/core");
 getActiveView(panel).setAttribute("noautohide", true);
-getActiveView(panel).setAttribute("backdrag", true);
 
 panel.port.on('link', opts => {
   var title = opts.title;
 
   if (title === 'send-to-tab') {
-    require('sdk/tabs').open('https://youtube.com/watch?v=' + parseYoutubeId(opts.src));
+    const pageUrl = getPageUrl(url);
+    if (pageUrl) require('sdk/tabs').open(pageUrl);
+    else console.log('could not parse page url for ', url);
     panel.hide();
   } else if (title === 'close') {
     updatePanel('');
@@ -32,8 +34,15 @@ panel.port.on('link', opts => {
   }
 });
 
-function parseYoutubeId(src) {
-  return src.substr(src.indexOf('embed/') + 6);
+function getPageUrl(url) {
+  let pageUrl = '';
+  if (url.indexOf('youtube')) {
+    pageUrl = 'https://youtube.com/watch?v=' + getVideoId(url);
+  } else if(url.indexOf('vimeo')) {
+    pageUrl = 'https://vimeo.com/video/' + getVideoId(url);
+  }
+
+  return pageUrl;
 }
 
 var cm = require("sdk/context-menu");
@@ -49,9 +58,32 @@ cm.Item({
   }
 });
 
+cm.Item({
+  label: "Send to mini player",
+  context: cm.SelectorContext('[href*="vimeo.com"]'),
+  contentScript: "self.on('click', function (node, data) {" +
+                 "  self.postMessage(node.href);" +
+                 "});",
+  onMessage: function(url) {
+    updatePanel(constructVimeoEmbedUrl(url));
+  }
+});
+
 function updatePanel(url) {
   panel.port.emit('set-video', url);
   panel.show();
+}
+
+function constructVimeoEmbedUrl(url) {
+  const params = qs.stringify({
+    autoplay: 1,
+    badge: 0,
+    byline: 0,
+    portrait: 0,
+    title: 0
+  });
+
+  return 'https://player.vimeo.com/video/' + getVideoId(url) + '?' + params;
 }
 
 function constructYoutubeEmbedUrl(url) {
@@ -63,5 +95,5 @@ function constructYoutubeEmbedUrl(url) {
     modestbranding: 1
   });
 
-  return "https://www.youtube.com/embed/" + require('get-youtube-id')(url) + '?' + params;
+  return "https://www.youtube.com/embed/" + getVideoId(url) + '?' + params;
 }

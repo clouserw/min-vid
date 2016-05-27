@@ -5,4 +5,4 @@
 !/install.rdf
 !/bootstrap.js
 !/package.json
-!/node_modules/get-youtube-id/**
+!/node_modules/get-video-id/**

@@ -32,12 +32,22 @@
      frame.onload = updatePlayer;
 
      function updatePlayer(ev) {
+       console.log('update player called', frame.src, ev);
        if (!frame.src) return;
-       window.ytPlayer = new YT.Player('video', {
-         events: {
-           'onReady': onPlayerReady
-         }
-       });
+
+       if (!!~frame.src.indexOf('youtube')) {
+         window.ytPlayer = new YT.Player('video', {
+           events: {
+             'onReady': onPlayerReady
+           }
+         });
+       } else if (!!~frame.src.indexOf('vimeo')) {
+         document.querySelector('.welcome').style.display = 'none';
+         document.querySelector('.controls').style.display = 'block';
+         document.querySelector('.video-wrapper').style.display = 'block';
+       } else {
+         console.log('not supported ', frame.src);
+       }
      }
 
      function onYouTubeIframeAPIReady() {
